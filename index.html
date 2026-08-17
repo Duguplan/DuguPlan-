@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>StudyTrack — UPSC • BPSC TRE 4.0 • CUET UG</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:#f4f7fb;color:#172033}
+header{background:linear-gradient(135deg,#243b80,#5b4bb7);color:#fff;padding:26px 20px}
+.wrap{max-width:1180px;margin:auto}.brand{font-size:26px;font-weight:800}.sub{opacity:.85;margin-top:5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin:22px 0}
+.card{background:#fff;border-radius:18px;padding:20px;box-shadow:0 7px 25px rgba(30,45,80,.08)}
+.stat{font-size:32px;font-weight:800;margin:8px 0}.muted{color:#6d7890}.bar{height:10px;background:#e8ecf4;border-radius:99px;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,#5b4bb7,#19a974);border-radius:99px}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}.tab,button{border:0;border-radius:10px;padding:11px 15px;cursor:pointer;font-weight:700}.tab{background:#e9edf7;color:#26324c}.tab.active,button.primary{background:#5b4bb7;color:#fff}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}select,input{padding:11px;border:1px solid #d9deea;border-radius:10px;background:#fff}
+.lesson{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #edf0f5}.lesson:last-child{border-bottom:0}.lesson input{width:19px;height:19px}
+.level{display:inline-block;padding:6px 11px;border-radius:99px;background:#eef2ff;color:#5142a6;font-weight:800}
+.small{font-size:13px}.empty{padding:28px;text-align:center;color:#7b8496}
+.upload{border:2px dashed #cbd3e4;padding:18px;border-radius:14px;background:#fafbfe}
+footer{text-align:center;color:#7c8598;padding:30px}
+@media(max-width:600px){header{padding:20px 14px}.card{padding:16px}.stat{font-size:27px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="brand">📚 StudyTrack</div>
+  <div class="sub">UPSC • BPSC TRE 4.0 • CUET UG — your personal study dashboard</div>
+</div></header>
+
+<main class="wrap">
+<section class="grid" id="stats"></section>
+
+<div class="card">
+  <h2>My Courses</h2>
+  <div class="tabs" id="tabs"></div>
+  <div class="controls">
+    <select id="subject"></select>
+    <button class="primary" onclick="addLesson()">+ Add Class</button>
+    <button onclick="resetCourse()">Reset Selected Course</button>
+  </div>
+  <div id="courseInfo"></div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>📤 Add Notes / Class Resource</h2>
+    <div class="upload">
+      <input id="resourceFile" type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.jpg,.jpeg,.png">
+      <p class="muted small">For this starter version, the file name is saved with the lesson. For a live cloud version, connect Firebase Storage.</p>
+      <button class="primary" onclick="attachResource()">Attach to selected class</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>🎯 Level Guide</h2>
+    <p>🔴 0–25% Beginner</p><p>🟠 26–50% Basic</p><p>🟡 51–70% Intermediate</p><p>🟢 71–90% Advanced</p><p>🔵 91–100% Exam Ready</p>
+  </div>
+</div>
+</main>
+<footer>StudyTrack starter • Data is stored in this browser using localStorage.</footer>
+
+<script>
+const subjects={
+ "UPSC":["History","Geography","Polity","Economy","Environment","Science & Tech","Current Affairs"],
+ "BPSC TRE 4.0":["Hindi","English","Math","EVS","General Studies","Bihar Special","Pedagogy"],
+ "CUET UG":["English","General Test","Economics","History","Political Science","Geography"]
+};
+const defaults={
+ "UPSC":[["Ancient History","Medieval History","Modern History"],["Physical Geography","Indian Geography","World Geography"],["Constitution Basics","Fundamental Rights","Parliament"],["Basic Economics","Indian Economy","Budget & Banking"]],
+ "BPSC TRE 4.0":[["Hindi Grammar","Comprehension"],["Grammar","Reading"],["Number System","Arithmetic"],["Environment","General Science"],["History","Geography","Polity"],["Bihar History","Bihar Geography","Bihar GK"],["Child Development","Teaching Methods"]],
+ "CUET UG":[["Grammar","Reading Comprehension"],["General Knowledge","Logical Reasoning"],["Microeconomics","Macroeconomics"],["Ancient History","Modern History"],["Constitution","Political Theory"],["Physical Geography","Human Geography"]]
+};
+let data=JSON.parse(localStorage.getItem("studytrack")||"null")||{
+  courses:Object.fromEntries(Object.keys(subjects).map(c=>[c,{done:[],lessons:[]}]))
+};
+let active="UPSC", activeSubject=subjects[active][0], selectedLesson=null;
+
+function save(){localStorage.setItem("studytrack",JSON.stringify(data));render()}
+function allLessons(course){
+  const arr=[...data.courses[course].lessons];
+  (defaults[course]||[]).flat().forEach(x=>{if(!arr.some(l=>l.name===x&&l.subject===findSubject(course,x)))arr.push({name:x,subject:findSubject(course,x),done:false,resource:""})});
+  return arr;
+}
+function findSubject(course,name){
+  const idx=(defaults[course]||[]).findIndex(a=>a.includes(name));
+  return idx>=0?subjects[course][idx]:(subjects[course][0]);
+}
+function level(p){return p<=25?"Beginner":p<=50?"Basic":p<=70?"Intermediate":p<=90?"Advanced":"Exam Ready"}
+function pct(course){
+  const ls=allLessons(course); return ls.length?Math.round(ls.filter(x=>x.done).length/ls.length*100):0;
+}
+function render(){
+  document.getElementById("stats").innerHTML=Object.keys(subjects).map(c=>`
+  <div class="card"><div class="muted">${c}</div><div class="stat">${pct(c)}%</div><div class="bar"><div class="fill" style="width:${pct(c)}%"></div></div><p><span class="level">${level(pct(c))}</span></p></div>`).join("");
+  document.getElementById("tabs").innerHTML=Object.keys(subjects).map(c=>`<button class="tab ${c===active?'active':''}" onclick="active='${c}';activeSubject=subjects[active][0];render()">${c}</button>`).join("");
+  document.getElementById("subject").innerHTML=subjects[active].map(s=>`<option ${s===activeSubject?'selected':''}>${s}</option>`).join("");
+  document.getElementById("subject").onchange=e=>{activeSubject=e.target.value;render()};
+  const ls=allLessons(active).filter(x=>x.subject===activeSubject);
+  document.getElementById("courseInfo").innerHTML=`
+    <h3>${activeSubject} — ${ls.filter(x=>x.done).length}/${ls.length} completed</h3>
+    ${ls.map((x,i)=>`<div class="lesson">
+      <input type="checkbox" ${x.done?'checked':''} onchange="toggle('${escape(x.name)}','${escape(x.subject)}',this.checked)">
+      <div style="flex:1"><b>${x.name}</b>${x.resource?`<div class="small muted">📎 ${x.resource}</div>`:""}</div>
+      <button onclick="selectedLesson='${escape(x.name)}'">Select</button>
+    </div>`).join("") || '<div class="empty">No classes yet. Click + Add Class.</div>'}`;
+}
+function escape(s){return s.replace(/'/g,"&#39;")}
+function toggle(name,subject,done){
+  const c=data.courses[active]; let x=c.lessons.find(l=>l.name===name&&l.subject===subject);
+  if(!x){x={name,subject,done:false,resource:""};c.lessons.push(x)} x.done=done; save();
+}
+function addLesson(){
+  const name=prompt(`Add a class for ${activeSubject}:`);
+  if(!name)return;
+  data.courses[active].lessons.push({name,subject:activeSubject,done:false,resource:""});save();
+}
+function attachResource(){
+  if(!selectedLesson){alert("Pehle kisi class ke saamne Select dabao.");return}
+  const f=document.getElementById("resourceFile").files[0];
+  if(!f){alert("Pehle file select karo.");return}
+  const x=data.courses[active].lessons.find(l=>l.name===selectedLesson);
+  if(x){x.resource=f.name;save();selectedLesson=null;document.getElementById("resourceFile").value=""}
+}
+function resetCourse(){
+  if(confirm(active+" ka custom progress reset karein?")){
+    data.courses[active]={done:[],lessons:[]};save();
+  }
+}
+render();
+</script>
+</body></html>

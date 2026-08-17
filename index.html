@@ -26,6 +26,25 @@
   </div>
   <div id="courseInfo"></div>
 </div>
+</div>
+
+<!-- यहाँ Daily Study Plan वाला code paste करना है -->
+<div class="card">
+  <h2>📅 Daily Study Plan</h2>
+
+  <div class="controls">
+    <input id="taskInput" type="text" placeholder="आज का task लिखें...">
+    <button class="primary" onclick="addTask()">+ Add Task</button>
+  </div>
+
+  <div id="dailyProgress" class="muted small">0% completed</div>
+
+  <div class="bar">
+    <div id="dailyFill" class="fill" style="width:0%"></div>
+  </div>
+
+  <div id="taskList"></div>
+</div>
 
 <div class="grid">
   <div class="card">
@@ -111,6 +130,85 @@ function resetCourse(){
     data.courses[active]={done:[],lessons:[]};save();
   }
 }
+  // ===== DAILY STUDY PLAN =====
+let dailyTasks = JSON.parse(localStorage.getItem("studytrack_daily_tasks") || "[]");
+
+function saveDailyTasks(){
+  localStorage.setItem("studytrack_daily_tasks", JSON.stringify(dailyTasks));
+  renderDailyTasks();
+}
+
+function addTask(){
+  const input = document.getElementById("taskInput");
+  const text = input.value.trim();
+
+  if(!text){
+    alert("Pehle task likho.");
+    return;
+  }
+
+  dailyTasks.push({
+    id: Date.now(),
+    text: text,
+    done: false
+  });
+
+  input.value = "";
+  saveDailyTasks();
+}
+
+function toggleTask(id){
+  const task = dailyTasks.find(t => t.id === id);
+  if(task){
+    task.done = !task.done;
+    saveDailyTasks();
+  }
+}
+
+function deleteTask(id){
+  dailyTasks = dailyTasks.filter(t => t.id !== id);
+  saveDailyTasks();
+}
+
+function renderDailyTasks(){
+  const list = document.getElementById("taskList");
+  const progress = document.getElementById("dailyProgress");
+  const fill = document.getElementById("dailyFill");
+
+  if(!list) return;
+
+  const total = dailyTasks.length;
+  const completed = dailyTasks.filter(t => t.done).length;
+  const percent = total ? Math.round((completed / total) * 100) : 0;
+
+  progress.textContent =
+    `${completed}/${total} completed — ${percent}%`;
+
+  fill.style.width = percent + "%";
+
+  if(!total){
+    list.innerHTML =
+      '<div class="empty">आज का कोई task नहीं है। ऊपर से Add Task करें।</div>';
+    return;
+  }
+
+  list.innerHTML = dailyTasks.map(task => `
+    <div class="lesson">
+      <input
+        type="checkbox"
+        ${task.done ? "checked" : ""}
+        onchange="toggleTask(${task.id})"
+      >
+
+      <div style="flex:1; ${task.done ? 'text-decoration:line-through;opacity:.6;' : ''}">
+        <b>${task.text}</b>
+      </div>
+
+      <button onclick="deleteTask(${task.id})">🗑️ Delete</button>
+    </div>
+  `).join("");
+}
 render();
+  renderDailyTasks();
 </script>
 </body></html>
